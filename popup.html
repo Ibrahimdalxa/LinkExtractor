@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Link Extractor</title>
+  <style>
+    :root {
+      --bg:       #0b0d12;
+      --surface:  #111420;
+      --border:   #1e2235;
+      --accent:   #00d9ff;
+      --accent2:  #7b61ff;
+      --text:     #d0d8f0;
+      --muted:    #5a6080;
+      --success:  #00e676;
+      --danger:   #ff5370;
+
+      --pdf:   #ff6b6b;
+      --archive: #ffa94d;
+      --doc:   #74c0fc;
+      --media: #b197fc;
+      --img:   #69db7c;
+      --app:   #ff8787;
+      --code:  #a9e34b;
+      --other: #868e96;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      width: 420px;
+      min-height: 200px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, 'Courier New', monospace;
+      font-size: 12px;
+      overflow-x: hidden;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(135deg, #0f1220 0%, #0b0d12 100%);
+      position: relative;
+      overflow: hidden;
+    }
+    .header::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 3px; height: 100%;
+      background: linear-gradient(to bottom, var(--accent), var(--accent2));
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .logo-icon {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+    }
+    .logo-text {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.2;
+    }
+    .logo-title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: #fff;
+      text-transform: uppercase;
+    }
+    .logo-sub {
+      font-size: 9px;
+      color: var(--muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .count-badge {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2px 10px;
+      font-size: 11px;
+      color: var(--accent);
+      font-weight: 700;
+      min-width: 36px;
+      text-align: center;
+    }
+    .scan-btn {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none;
+      border-radius: 6px;
+      color: #000;
+      font-family: inherit;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 5px 10px;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .scan-btn:hover { opacity: 0.85; }
+    .scan-btn:active { transform: scale(0.96); }
+    .scan-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── FILTER TABS ── */
+    .filter-bar {
+      display: flex;
+      gap: 4px;
+      padding: 10px 12px 8px;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      scrollbar-width: none;
+      background: var(--surface);
+    }
+    .filter-bar::-webkit-scrollbar { display: none; }
+
+    .filter-tab {
+      flex-shrink: 0;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      padding: 3px 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
+    .filter-tab:hover { border-color: var(--accent); color: var(--accent); }
+    .filter-tab.active {
+      border-color: transparent;
+      color: #000;
+      font-weight: 700;
+    }
+    .filter-tab .tab-count {
+      font-size: 9px;
+      opacity: 0.7;
+    }
+
+    /* ── SEARCH ── */
+    .search-wrap {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .search-input {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 12px;
+      padding: 7px 12px 7px 30px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .search-input:focus { border-color: var(--accent); }
+    .search-input::placeholder { color: var(--muted); }
+    .search-wrap { position: relative; }
+    .search-icon {
+      position: absolute;
+      left: 22px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 13px;
+      pointer-events: none;
+    }
+
+    /* ── LINK LIST ── */
+    .link-list {
+      max-height: 320px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+    .link-list::-webkit-scrollbar { width: 4px; }
+    .link-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .link-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.12s;
+    }
+    .link-item:hover { background: var(--surface); }
+
+    .type-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .link-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .link-filename {
+      font-size: 12px;
+      font-weight: 600;
+      color: #fff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .link-url {
+      font-size: 10px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 2px;
+    }
+    .type-badge {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      border-radius: 3px;
+      padding: 2px 5px;
+      flex-shrink: 0;
+      text-transform: uppercase;
+      opacity: 0.9;
+    }
+    .link-actions {
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .action-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 11px;
+      padding: 4px 7px;
+      transition: all 0.12s;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+    .action-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .action-btn.copied { border-color: var(--success); color: var(--success); }
+    .action-btn.dl { }
+    .action-btn.dl:hover { border-color: var(--accent2); color: var(--accent2); }
+
+    /* ── STATES ── */
+    .state-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      gap: 8px;
+      color: var(--muted);
+    }
+    .state-icon { font-size: 32px; margin-bottom: 4px; }
+    .state-text { font-size: 12px; color: var(--muted); text-align: center; line-height: 1.6; }
+    .state-sub { font-size: 11px; color: var(--muted); opacity: 0.6; }
+
+    /* spinning loader */
+    .loader {
+      width: 24px; height: 24px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── FOOTER ── */
+    .footer {
+      padding: 10px 12px;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .footer-info {
+      flex: 1;
+      font-size: 10px;
+      color: var(--muted);
+    }
+    .copy-all-btn {
+      background: transparent;
+      border: 1px solid var(--accent);
+      border-radius: 5px;
+      color: var(--accent);
+      font-family: inherit;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 5px 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .copy-all-btn:hover { background: var(--accent); color: #000; }
+    .copy-all-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .copy-all-btn.copied { background: var(--success); border-color: var(--success); color: #000; }
+
+    .dl-all-btn {
+      background: transparent;
+      border: 1px solid var(--accent2);
+      border-radius: 5px;
+      color: var(--accent2);
+      font-family: inherit;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 5px 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .dl-all-btn:hover { background: var(--accent2); color: #fff; }
+    .dl-all-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">⬇</div>
+      <div class="logo-text">
+        <span class="logo-title">Link Extractor</span>
+        <span class="logo-sub">Download scanner</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="count-badge" id="totalCount">—</span>
+      <button class="scan-btn" id="scanBtn">Scan</button>
+    </div>
+  </div>
+
+  <!-- FILTER TABS -->
+  <div class="filter-bar" id="filterBar">
+    <button class="filter-tab active" data-type="all" style="">All <span class="tab-count" id="cnt-all"></span></button>
+    <button class="filter-tab" data-type="pdf"  style="--tc: var(--pdf)">PDF <span class="tab-count" id="cnt-pdf"></span></button>
+    <button class="filter-tab" data-type="archive" style="--tc: var(--archive)">Archive <span class="tab-count" id="cnt-archive"></span></button>
+    <button class="filter-tab" data-type="document" style="--tc: var(--doc)">Doc <span class="tab-count" id="cnt-document"></span></button>
+    <button class="filter-tab" data-type="media" style="--tc: var(--media)">Media <span class="tab-count" id="cnt-media"></span></button>
+    <button class="filter-tab" data-type="image" style="--tc: var(--img)">Image <span class="tab-count" id="cnt-image"></span></button>
+    <button class="filter-tab" data-type="app" style="--tc: var(--app)">App <span class="tab-count" id="cnt-app"></span></button>
+    <button class="filter-tab" data-type="code" style="--tc: var(--code)">Code <span class="tab-count" id="cnt-code"></span></button>
+    <button class="filter-tab" data-type="other" style="--tc: var(--other)">Other <span class="tab-count" id="cnt-other"></span></button>
+  </div>
+
+  <!-- SEARCH -->
+  <div class="search-wrap">
+    <span class="search-icon">⌕</span>
+    <input class="search-input" type="text" id="searchInput" placeholder="Filter by filename or URL…">
+  </div>
+
+  <!-- LINK LIST -->
+  <div class="link-list" id="linkList">
+    <div class="state-box" id="stateInitial">
+      <div class="state-icon">🔍</div>
+      <div class="state-text">Click <strong>Scan</strong> to extract<br>all download links on this page.</div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer" id="footer">
+    <span class="footer-info" id="footerInfo">No links extracted yet</span>
+    <button class="dl-all-btn" id="dlAllBtn" disabled>↓ All</button>
+    <button class="copy-all-btn" id="copyAllBtn" disabled>Copy All</button>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
