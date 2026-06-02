@@ -1,0 +1,8 @@
+├── manifest.json       # Extension configuration & MV3 API access controls
+├── popup.html          # Extension structure, styling palette, and DOM nodes
+├── popup.js            # Extractor injector, filter controllers, and downloader utilities
+└── icons/              # Static branding and interface assets
+    ├── icon16.png
+    ├── icon32.png
+    ├── icon48.png
+    └── icon128.png
